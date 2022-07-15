@@ -9,10 +9,7 @@ class Interface:
         self.ui: dict = {}
         self.n_slots = env_config['n_items']
         self.n_items = env_config['n_items']
-        self.mid = env_config['mid']
-        self.low = env_config['low']
-        self.diff = env_config['n_diff']
-        self.relative = env_config['relative']
+        self.random = env_config['random']
         self.decision_time = 0.4
 
     def generate_random_ui(self):
@@ -33,7 +30,6 @@ class Interface:
         pixels[-(pixel_margins + int(size * cells_width)):, :] = 0
         pixels[:, :pixel_margins] = 0
         pixels[:, -(pixel_margins + int(size * cells_height)):] = 0
-        ui ={}
         for target, item in zip(range(self.n_slots), range(self.n_items)):
             element = _element.copy()
             element['item'] = item
@@ -51,8 +47,7 @@ class Interface:
             element['x'] /= cells_width
             element['y'] /= cells_height
 
-            ui[target] = element
-        return ui
+            self.ui[target] = element
 
     def generate_static_ui(self):
         size = 0.15
@@ -107,12 +102,8 @@ class Interface:
 def main():
 
     env_config = {
-        'low': 'coordinate',  # True, False, 'heuristic', 'coordinate'
-        'mid': 'heuristic',  # None, 'multi', 'single', 'heuristic'
         'random':True,
-        'relative': False,
         'n_items':15,
-        'n_diff': 'curriculum'
     }
     interface = Interface(env_config)
     while True:
