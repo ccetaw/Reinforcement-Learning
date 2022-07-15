@@ -15,15 +15,13 @@ from env_utils import (
     compute_width_distance_fast
 )
 from interface import Interface
-import argparse
-from ray.rllib.agents import ppo
-from ray.tune.logger import pretty_print
 
-parser = argparse.ArgumentParser()
-group = parser.add_mutually_exclusive_group()
-group.add_argument("--demo", action="store_true", help="Show a window of the system")
-group.add_argument("--train", action="store_true", help="Train the agent")
-args = parser.parse_args()
+# import argparse
+# parser = argparse.ArgumentParser()
+# group = parser.add_mutually_exclusive_group()
+# group.add_argument("--demo", action="store_true", help="Show a window of the system")
+# group.add_argument("--train", action="store_true", help="Train the agent")
+# args = parser.parse_args()
 
 
 class Environment(gym.Env, ABC, Interface):
@@ -46,15 +44,12 @@ class Environment(gym.Env, ABC, Interface):
         self.observation_space = spaces.Dict(obs_space_dict)
 
         self.done = False
-        self.num_target = 3
-        self.start_action = np.array([0,0])
         self.counter = 0
         self.state = {}  # State = Observation in MDP
 
         self.screen = None
         self.clock = None
         self.isopen = True
-        self.dt = 0.01  # seconds
 
     def get_reward(self):
         hit = -1
@@ -170,58 +165,57 @@ class Environment(gym.Env, ABC, Interface):
         self.isopen = False
 
 if __name__ == "__main__":
-    
-    if args.demo:
-        env_config = {
-            'low': 'coordinate',  # True, False, 'heuristic', 'coordinate'
-            'mid': 'None',  # None, 'multi', 'single', 'heuristic'
-            'random':False,
-            'relative': False,
-            'n_items':7,
-            'n_diff': 'curriculum'
-        }
-        env = Environment(env_config)
-        for i in range(3):
-            env.reset()
-            while not env.done:
-                env.render()
-                env.step(env.action_space.sample())
-        env.close()
+    env_config = {
+        'low': 'coordinate',  # True, False, 'heuristic', 'coordinate'
+        'mid': 'None',  # None, 'multi', 'single', 'heuristic'
+        'random':False,
+        'relative': False,
+        'n_items':7,
+        'n_diff': 'curriculum'
+    }
 
-    if args.train:
-        config = {
-            "env": Environment,  # or "corridor" if registered above
-            "env_config": {
-                'low': 'coordinate',  # True, False, 'heuristic', 'coordinate'
-                'mid': 'None',  # None, 'multi', 'single', 'heuristic'
-                'random':False,
-                'relative': False,
-                'n_items':7,
-                'n_diff': 'curriculum'
-            },
-            # Use GPUs iff `RLLIB_NUM_GPUS` env var set to > 0.
-            "num_gpus": 0,
-            "num_workers": 1,  # parallelism
-            "framework": "torch",
-            "gamma": 0.9
-        }
-        stop = {
-            "training_iteration": 150,
-            "timesteps_total": 100000,
-            "episode_reward_mean": -1,
-        }
-        ppo_config = ppo.DEFAULT_CONFIG.copy()
-        ppo_config.update(config)
-        # use fixed learning rate instead of grid search (needs tune)
-        ppo_config["lr"] = 1e-3
-        trainer = ppo.PPOTrainer(config=ppo_config, env=Environment)
-        # run manual training loop and print results after each iteration
-        for _ in range(stop["training_iteration"]):
-            result = trainer.train()
-            print(pretty_print(result))
-            # stop training of the target train steps or reward are reached
-            if (
-                result["timesteps_total"] >= stop["timesteps_total"]
-                or result["episode_reward_mean"] >= stop["episode_reward_mean"]
-            ):
-                break
+    
+    from ray.rllib.agents import ppo
+    from ray.tune.logger import pretty_print
+    config = {
+        "env": Environment,  # or "corridor" if registered above
+        "env_config": env_config,
+        # Use GPUs iff `RLLIB_NUM_GPUS` env var set to > 0.
+        "num_gpus": 0,
+        "num_workers": 1,  # parallelism
+        "framework": "torch",
+        "gamma": 0.9
+    }
+
+    stop = {
+        "training_iteration": 150,
+        "timesteps_total": 100000,
+        "episode_reward_mean": -1,
+    }
+
+    ppo_config = ppo.DEFAULT_CONFIG.copy()
+    ppo_config.update(config)
+    # use fixed learning rate instead of grid search (needs tune)
+    ppo_config["lr"] = 1e-3
+    trainer = ppo.PPOTrainer(config=ppo_config, env=Environment)
+    # run manual training loop and print results after each iteration
+    for _ in range(stop["training_iteration"]):
+        result = trainer.train()
+        print(pretty_print(result))
+        # stop training of the target train steps or reward are reached
+        if (
+            result["timesteps_total"] >= stop["timesteps_total"]
+            or result["episode_reward_mean"] >= stop["episode_reward_mean"]
+        ):
+            break
+
+    env = Environment(env_config)
+    for i in range(3):
+        env.reset()
+        while not env.done:
+            env.render()
+            action = trainer.compute_single_action(env.state)
+            env.step(action)
+    env.close()
+
+        
