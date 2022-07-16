@@ -16,12 +16,6 @@ from env_utils import (
 )
 from interface import Interface
 
-import argparse
-parser = argparse.ArgumentParser()
-group = parser.add_mutually_exclusive_group()
-group.add_argument("--demo", action="store_true", help="Show a window of the system")
-group.add_argument("--dry_train", action="store_true", help="Train the agent")
-args = parser.parse_args()
 
 """
 Setting:
@@ -213,6 +207,12 @@ class Environment(gym.Env, ABC, Interface):
         self.isopen = False
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--demo", action="store_true", help="Show a window of the system")
+    group.add_argument("--dry_train", action="store_true", help="Train the agent")
+    args = parser.parse_args()
 
     env_config = {
         'random':False,

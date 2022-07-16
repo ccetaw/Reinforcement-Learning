@@ -26,7 +26,7 @@ config = {
 
 stop = {
     "training_iteration": 1000,
-    "episode_reward_mean": -5,
+    "episode_reward_mean": -1,
 }
 
 config = {**ppo.DEFAULT_CONFIG, **config}
@@ -35,7 +35,7 @@ results = tune.run(
         trial_name_creator=trial_name_string,
         stop=stop,
         config=config,
-        local_dir="ray_results/stochastic",
+        local_dir="ray_results",
         verbose=1,
         checkpoint_freq=50,
         checkpoint_at_end=True,
