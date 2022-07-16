@@ -10,7 +10,6 @@ ray.init(local_mode=False, num_cpus=8, num_gpus=0)
 env_config = {
         'random':tune.grid_search([True, False]),
         'n_items':tune.grid_search([7, 12]),
-        'n_targets': tune.grid_search([2, 3])
     }
 config = {
     "env": Environment,  # or "corridor" if registered above
