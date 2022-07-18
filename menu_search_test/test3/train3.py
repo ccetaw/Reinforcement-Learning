@@ -1,5 +1,5 @@
 import ray
-from environment2 import Environment
+from environment3 import Environment
 from ray.rllib.agents import ppo
 from ray import tune
 from ray.tune.integration.wandb import WandbLoggerCallback
