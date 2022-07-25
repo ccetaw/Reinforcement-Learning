@@ -1,4 +1,3 @@
-import imp
 import numpy as np
 import json
 from utils import NpEncoder

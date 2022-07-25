@@ -47,3 +47,8 @@ def minjerk_trajectory(t, t_total, start_point, end_point):
     x = start_point[0] + (end_point[0] - start_point[0]) * (6 * t**5 - 15 * t**4 + 10 * t**3)
     y = start_point[1] + (end_point[1] - start_point[1]) * (6 * t**5 - 15 * t**4 + 10 * t**3)
     return np.array([x, y])
+
+def policy_mapping_fn(agent_id):
+    return f"{agent_id}"
+
+

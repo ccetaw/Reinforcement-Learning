@@ -6,27 +6,31 @@ from env import MultiAgentUI
 from utils import policy_mapping_fn
 
 
-ray.init(local_mode=False, num_cpus=8, num_gpus=0)
+def generate_multiagent_dictionary(spec):
+    env = MultiAgentUI(spec.config.env_config)
+    policies = {
+        "user_high": (
+            None,
+            env.observation_space['user_high'],
+            env.action_space['user_high'],
+            {}
+        ),
+        "user_low":(
+            None,
+            env.observation_space['user_low'],
+            env.action_space['user_low'],
+            {}
+        )   
+    }
+    return {"policies": policies,
+            "policy_mapping_fn": policy_mapping_fn}
+
+ray.init(local_mode=False, num_cpus=24, num_gpus=0)
 
 env_config = {
     'random': tune.grid_search([True, False]),
-    'n_buttons': tune.grid_search([7, 10, 15])
-}
-
-env = MultiAgentUI(env_config, init=True)
-policies = {
-    "user_high_policy": (
-        None,
-        env.observation_space['user_high'],
-        env.action_space['user_high'],
-        {}
-    ),
-    "user_low_policy":(
-        None,
-        env.observation_space['user_low'],
-        env.action_space['user_low'],
-        {}
-    )
+    'n_buttons': tune.grid_search([7, 10, 15]),
+    'save_ui': tune.grid_search([True])
 }
 
 stop = {
@@ -37,10 +41,7 @@ config = {
     "env": MultiAgentUI,
     "env_config": env_config,
     "gamma": 0.9,
-    "multiagent": {
-        "policies": policies,
-        "policy_mapping_fn": policy_mapping_fn,
-    },
+    "multiagent": tune.sample_from(generate_multiagent_dictionary),
     "framework": "torch",
     "log_level": "CRITICAL",
     "num_gpus": 0,
@@ -62,7 +63,7 @@ results = tune.run(
         WandbLoggerCallback(
                 project=f"menu_search_test",
                 entity="cetaceanw",
-                group=f"hierachical",
+                group=f"simple_hierachical",
                 job_type="train",
                 log_config=True,
                 save_code=True,

@@ -5,17 +5,27 @@ from utils import (
     calc_distance,
     compute_stochastic_position
     )
-from datetime import datetime
-
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
+from datetime import datetime
+from utils import policy_mapping_fn
 
 class MultiAgentUI(MultiAgentEnv, Interface):
 
     metadata = {"render.modes": ["human", "rgb_array"], "render_fps": 1}
     reward_range = (-float("inf"), float("inf"))
 
-    def __init__(self, uiconfig):
-        super(MultiAgentEnv, self).__init__(uiconfig)
+    def __init__(self, envconfig, init=True):
+        if init:
+            super(MultiAgentEnv, self).__init__(envconfig)
+            self.save_ui = envconfig['save_ui']
+        else:
+            uiconfig = {
+                'random': False,
+                'n_buttons': 7
+            }
+            super(MultiAgentEnv, self).__init__(uiconfig)
+            self.save_ui = False
+
         self._agent_ids = ['user_high', 'user_low']
         self.action_space = {
             'user_high': spaces.Discrete(self.n_buttons),
@@ -44,21 +54,25 @@ class MultiAgentUI(MultiAgentEnv, Interface):
         }
 
         self.counter = 0
-
-        now = datetime.now()
-        dt_string = now.strftime("%Y-%m-%d_%H-%M-%S")
-        file_name = dt_string + f"n_buttons-{self.n_buttons}" + f"random-{self.random}"
-        self.save(file_name)
+        self.done = False
+        
+        if self.save_ui:
+            now = datetime.now()
+            dt_string = now.strftime("%Y-%m-%d_%H-%M-%S")
+            file_name = dt_string + f"n_buttons-{self.n_buttons}_" + f"random-{self.random}" + ".json"
+            self.save(file_name)
 
         self.screen = None
         self.clock = None
         self.isopen = True
 
+        self.reset()
+
     def get_obs(self, agent_id):
         obs = {}
         for key in self.observation_space[agent_id]:
             obs[key] = self.state[key]
-        return obs
+        return {agent_id: obs}
 
     def get_reward(self, agent_id):
         pass
@@ -67,11 +81,10 @@ class MultiAgentUI(MultiAgentEnv, Interface):
         self.state['current_pattern'] = spaces.MultiBinary(self.n_buttons).sample()
         self.state['goal_pattern'] = spaces.MultiBinary(self.n_buttons).sample()
         self.state['cursor_position'] = spaces.Box(low=0., high=1., shape=(2,)).sample()
-        obs = {}
-        for key in self.observation_space['user_high'].keys() :
-            obs[key] = self.state[key]
+        self.counter = 0
+        self.done = False
 
-        return {'user_high': obs}
+        return self.get_obs('user_high')
 
     def step(self, action_dict):
         agent_active = str(list(action_dict.keys())[0])
@@ -80,7 +93,7 @@ class MultiAgentUI(MultiAgentEnv, Interface):
         if agent_active == 'user_high':
             to_swtich = np.nonzero(self.state['goal_pattern'] - self.state['current_pattern'])[0]
             if action in to_swtich:
-                reward['user_high'] = 1
+                reward['user_high'] = 0
             else:
                 reward['user_high'] = -5
             target = self.button_normalized_position(self.ui[action]) + 0.5 * self.button_normalized_size(self.ui[action])
@@ -93,12 +106,14 @@ class MultiAgentUI(MultiAgentEnv, Interface):
             in_button = self.check_within_button(self.state['cursor_position'])
             if in_button is not None:
                 self.state['current_pattern'][in_button] = 1 - self.state['current_pattern'][in_button]
-                print(f"Button id {in_button}")
+                # print(f"Button id {in_button}")
 
             if np.array_equal(self.state['current_pattern'], self.state['goal_pattern']):
+                self.done = True
                 done = {'__all__': True}
                 reward['user_high'] = -self.counter
             elif self.counter >= self.n_buttons * 2:
+                self.done = True
                 done = {'__all__': True}
                 reward['user_high'] = -self.counter * 2
             else:
@@ -166,18 +181,85 @@ class MultiAgentUI(MultiAgentEnv, Interface):
 
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--demo", action="store_true", help="Show a window of the system")
+    group.add_argument("--dry_train", action="store_true", help="Train the agent")
+    args = parser.parse_args()
+
     uiconfig = {
         'random': True,
-        'n_buttons': 7,
+        'n_buttons': 10,
+        'save_ui': False
     }
-    env = MultiAgentUI(uiconfig)
+    if args.demo:
+        env = MultiAgentUI(uiconfig)
 
-    for _ in range(3):
-        env.reset()
-        for _ in range(10):
-            env.step({'user_high': env.action_space['user_high'].sample()})
-            env.step({'user_low': env.state['target']})
-            env.render()
-    env.close()
+        for _ in range(3):
+            env.reset()
+            for _ in range(10):
+                env.step({'user_high': env.action_space['user_high'].sample()})
+                env.step({'user_low': env.state['target']})
+                env.render()
+        env.close()
+
+    if args.dry_train:
+        from ray.rllib.agents import ppo
+        from ray.tune.logger import pretty_print
+        env = MultiAgentUI(uiconfig)
+        policies = {
+            "user_high": (
+                None,
+                env.observation_space['user_high'],
+                env.action_space['user_high'],
+                {}
+            ),
+            "user_low":(
+                None,
+                env.observation_space['user_low'],
+                env.action_space['user_low'],
+                {}
+            )
+        }
+
+        config = {
+            "num_workers": 3,
+            "env": MultiAgentUI,
+            "env_config": uiconfig,
+            "gamma": 0.9,
+            "multiagent": {
+                "policies": policies,
+                "policy_mapping_fn": policy_mapping_fn,
+            },
+            "framework": "torch",
+            "log_level": "CRITICAL",
+            "num_gpus": 0,
+            "seed": 31415,
+        }
+
+        stop = {
+            "training_iteration": 150,
+        }
+
+        config = {**ppo.DEFAULT_CONFIG, **config}
+        trainer = ppo.PPOTrainer(config=config)
+
+        for _ in range(stop["training_iteration"]):
+            result = trainer.train()
+            print(pretty_print(result))
+
+        trainer.save("test4_1")
+
+        # env.load("n_buttons-7random-False.json")
+        # for i in range(10):
+        #     env.reset()
+        #     while not env.done:
+        #         action = trainer.compute_single_action(env.get_obs('user_high'))
+        #         env.step(action)
+        #         action = trainer.compute_single_action(env.get_obs('user_low'))
+        #         env.step(action)
+        #         env.render()
+        # env.close()
 
 
