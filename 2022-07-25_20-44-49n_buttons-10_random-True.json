@@ -1,0 +1,112 @@
+{
+    "screen_height": 1080,
+    "screen_width": 1920,
+    "grid_size": 40,
+    "interval": 1,
+    "margin_size": 40,
+    "n_buttons": 10,
+    "button_id": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+    ],
+    "buttons": [
+        {
+            "position": [
+                280,
+                1280
+            ],
+            "height": 2,
+            "width": 1,
+            "id": 0
+        },
+        {
+            "position": [
+                160,
+                320
+            ],
+            "height": 1,
+            "width": 0,
+            "id": 1
+        },
+        {
+            "position": [
+                440,
+                200
+            ],
+            "height": 1,
+            "width": 0,
+            "id": 2
+        },
+        {
+            "position": [
+                240,
+                480
+            ],
+            "height": 1,
+            "width": 1,
+            "id": 3
+        },
+        {
+            "position": [
+                80,
+                1280
+            ],
+            "height": 0,
+            "width": 0,
+            "id": 4
+        },
+        {
+            "position": [
+                880,
+                1120
+            ],
+            "height": 1,
+            "width": 2,
+            "id": 5
+        },
+        {
+            "position": [
+                120,
+                1440
+            ],
+            "height": 0,
+            "width": 0,
+            "id": 6
+        },
+        {
+            "position": [
+                480,
+                760
+            ],
+            "height": 0,
+            "width": 2,
+            "id": 7
+        },
+        {
+            "position": [
+                160,
+                760
+            ],
+            "height": 1,
+            "width": 1,
+            "id": 8
+        },
+        {
+            "position": [
+                520,
+                360
+            ],
+            "height": 1,
+            "width": 0,
+            "id": 9
+        }
+    ]
+}

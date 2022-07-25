@@ -3,7 +3,7 @@ from ray import tune
 from ray.tune.integration.wandb import WandbLoggerCallback
 from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
 from env import MultiAgentUI
-from utils import policy_mapping_fn
+from utils import (policy_mapping_fn, trial_name_string)
 
 
 def generate_multiagent_dictionary(spec):
@@ -51,7 +51,7 @@ config = {
 config = {**DEFAULT_CONFIG, **config}
 results = tune.run(
     PPOTrainer,
-    # trial_name_creator=trial_name_string,
+    trial_name_creator=trial_name_string,
     stop=stop,
     config=config,
     local_dir="ray_results",

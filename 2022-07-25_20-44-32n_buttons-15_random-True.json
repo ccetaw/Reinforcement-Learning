@@ -1,0 +1,162 @@
+{
+    "screen_height": 1080,
+    "screen_width": 1920,
+    "grid_size": 40,
+    "interval": 1,
+    "margin_size": 40,
+    "n_buttons": 15,
+    "button_id": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+    ],
+    "buttons": [
+        {
+            "position": [
+                880,
+                160
+            ],
+            "height": 1,
+            "width": 1,
+            "id": 0
+        },
+        {
+            "position": [
+                800,
+                1200
+            ],
+            "height": 0,
+            "width": 1,
+            "id": 1
+        },
+        {
+            "position": [
+                760,
+                880
+            ],
+            "height": 1,
+            "width": 1,
+            "id": 2
+        },
+        {
+            "position": [
+                80,
+                1520
+            ],
+            "height": 0,
+            "width": 0,
+            "id": 3
+        },
+        {
+            "position": [
+                360,
+                1560
+            ],
+            "height": 1,
+            "width": 2,
+            "id": 4
+        },
+        {
+            "position": [
+                440,
+                1240
+            ],
+            "height": 1,
+            "width": 0,
+            "id": 5
+        },
+        {
+            "position": [
+                640,
+                280
+            ],
+            "height": 1,
+            "width": 1,
+            "id": 6
+        },
+        {
+            "position": [
+                280,
+                80
+            ],
+            "height": 1,
+            "width": 0,
+            "id": 7
+        },
+        {
+            "position": [
+                760,
+                1560
+            ],
+            "height": 1,
+            "width": 2,
+            "id": 8
+        },
+        {
+            "position": [
+                120,
+                520
+            ],
+            "height": 2,
+            "width": 2,
+            "id": 9
+        },
+        {
+            "position": [
+                600,
+                120
+            ],
+            "height": 0,
+            "width": 0,
+            "id": 10
+        },
+        {
+            "position": [
+                800,
+                640
+            ],
+            "height": 2,
+            "width": 0,
+            "id": 11
+        },
+        {
+            "position": [
+                40,
+                1680
+            ],
+            "height": 2,
+            "width": 1,
+            "id": 12
+        },
+        {
+            "position": [
+                80,
+                1320
+            ],
+            "height": 1,
+            "width": 0,
+            "id": 13
+        },
+        {
+            "position": [
+                280,
+                840
+            ],
+            "height": 1,
+            "width": 1,
+            "id": 14
+        }
+    ]
+}

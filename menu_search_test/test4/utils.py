@@ -51,4 +51,10 @@ def minjerk_trajectory(t, t_total, start_point, end_point):
 def policy_mapping_fn(agent_id):
     return f"{agent_id}"
 
-
+def trial_name_string(trial) -> str:
+    env_config = trial.config["env_config"]
+    keys = list(env_config.keys())
+    trial_name = f"{trial.trial_id}"
+    for key in keys:
+        trial_name += f"-{key}_{env_config[key]}"
+    return trial_name
