@@ -99,17 +99,36 @@ class Interface:
         pass
 
 
-def main():
-
-    env_config = {
-        'random':True,
-        'n_items':15,
-    }
-    interface = Interface(env_config)
-    while True:
-        print("-")
-        interface.generate_random_ui()
-
 
 if __name__ == '__main__':
-    main()
+    env_config = {
+        'random':True,
+        'n_items':18,
+    }
+    interface = Interface(env_config)
+    interface.generate_random_ui()
+
+    import pygame
+    from pygame import gfxdraw
+    pygame.init()
+    pygame.display.init()
+    screen = pygame.display.set_mode((interface.screen_width, interface.screen_height))
+    clock = pygame.time.Clock()
+    for _ in range(90):
+        surf = pygame.Surface((interface.screen_width, interface.screen_height))
+        surf.fill((255, 255, 255))
+        font = pygame.font.Font('freesansbold.ttf', 16)
+
+        for element in interface.ui:
+                rect = pygame.Rect(interface.ui[element]['x'] * interface.screen_width,
+                                interface.ui[element]['y'] * interface.screen_height,
+                                interface.ui[element]['w'] * interface.screen_width,
+                                interface.ui[element]['h'] * interface.screen_height)
+                gfxdraw.rectangle(surf, rect, (100, 100, 100))
+
+        screen.blit(surf, (0, 0))
+        pygame.event.pump()
+        clock.tick(30)
+        pygame.display.flip()
+    pygame.display.quit()
+    pygame.quit()
