@@ -1,13 +1,13 @@
-from env import MultiAgentUI
+from env3 import MultiAgentUI
 from ray.rllib.agents import ppo
 from utils import policy_mapping_fn
 
 env_config = {
         'random': False,
-        'n_buttons': 7,
-        'save_ui': False
+        'n_buttons': 6,
+        'save_ui': False,
+        'mode': 'all_exclu'
     }
-
 env = MultiAgentUI(env_config)
 
 policies = {
@@ -41,16 +41,15 @@ config = {
         }
 config = {**ppo.DEFAULT_CONFIG, **config}
 agent = ppo.PPOTrainer(config=config)
-agent.restore('test4_1/checkpoint_000150/checkpoint-150')
+agent.restore('/home/cetaceanw/repo/Reinforcement-Learning/menu_search_test/test4/test4_1/checkpoint_000100/checkpoint-100')
 
 
 for i in range(10):
     env.reset()
+    env.render()
     while not env.done:
-        action = agent.get_policy('user_high').compute_single_action(obs= env.get_obs('user_high'))
-        env.step(action)
-        # action = agent.compute_single_action(env.get_obs('user_low'), policy_id=policy_mapping_fn('user_low'))
-        action = agent.get_policy('user_low').compute_single_action(obs= env.get_obs('user_low'))
-        env.step(action)
+        action = agent.compute_single_action(observation=list(env.get_obs('user_high').values())[0], policy_id='user_high', unsquash_action=True)
+        env.step({'user_high': action})
+        env.step({'user_low': env.state['target']})
         env.render()
 env.close()

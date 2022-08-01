@@ -3,7 +3,8 @@ import numpy as np
 from interface import Interface
 from utils import (
     calc_distance,
-    compute_stochastic_position
+    compute_stochastic_position,
+    minjerk_trajectory
     )
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from datetime import datetime
@@ -11,7 +12,7 @@ from utils import policy_mapping_fn
 
 class MultiAgentUI(MultiAgentEnv, Interface):
 
-    metadata = {"render.modes": ["human", "rgb_array"], "render_fps": 1}
+    metadata = {"render.modes": ["human", "rgb_array"], "render_fps": 30}
     reward_range = (-float("inf"), float("inf"))
 
     def __init__(self, envconfig, init=True):
@@ -26,10 +27,11 @@ class MultiAgentUI(MultiAgentEnv, Interface):
             super(MultiAgentEnv, self).__init__(uiconfig)
             self.save_ui = False
 
-        self._agent_ids = ['user_high', 'user_low']
+        self._agent_ids = ['user_high', 'user_low', 'dummy']
         self.action_space = {
             'user_high': spaces.Discrete(self.n_buttons),
-            'user_low': spaces.Box(low=0, high=1, shape=(2,), dtype=float)
+            'user_low': spaces.Box(low=0, high=1, shape=(2,), dtype=float),
+            'dummy': spaces.Box(low=0, high=1, shape=(2,), dtype=float)
         }
         obs_user_high_dict = {
             'current_pattern': spaces.MultiBinary(self.n_buttons),
@@ -39,10 +41,15 @@ class MultiAgentUI(MultiAgentEnv, Interface):
             'cursor_position': spaces.Box(low=0., high=1., shape=(2,)),
             'target': spaces.Box(low=0., high=1., shape=(2,))
         }
+        obs_dummy_dict = {
+            'cursor_position': spaces.Box(low=0., high=1., shape=(2,)),
+            'target': spaces.Box(low=0., high=1., shape=(2,))
+        }
         
         self.observation_space = {
             'user_high': spaces.Dict(obs_user_high_dict),
-            'user_low': spaces.Dict(obs_user_low_dict)
+            'user_low': spaces.Dict(obs_user_low_dict),
+            'dummy': spaces.Dict(obs_dummy_dict)
         }
 
         self.state = {
@@ -55,6 +62,8 @@ class MultiAgentUI(MultiAgentEnv, Interface):
 
         self.counter = 0
         self.done = False
+        self.add = {}
+        self.dt = 0.01
         
         if self.save_ui:
             now = datetime.now()
@@ -85,8 +94,8 @@ class MultiAgentUI(MultiAgentEnv, Interface):
         pass
 
     def reset(self):
-        self.state['current_pattern'] = self.sample_possible_pattern()
-        self.state['goal_pattern'] = self.sample_possible_pattern()
+        self.state['current_pattern'] = spaces.MultiBinary(self.n_buttons).sample()
+        self.state['goal_pattern'] = spaces.MultiBinary(self.n_buttons).sample()
         self.state['cursor_position'] = spaces.Box(low=0., high=1., shape=(2,)).sample()
         self.counter = 0
         self.done = False
@@ -108,23 +117,54 @@ class MultiAgentUI(MultiAgentEnv, Interface):
             self.counter += 1
             return self.get_obs('user_low'), reward, {"__all__": False}, {}
         elif agent_active == 'user_low':
-            self.state['cursor_position'], _ = compute_stochastic_position(action, self.state['cursor_position'], sigma=0.01)
-            reward['user_low'] = -calc_distance(self.state['cursor_position'], self.state['target'], 'l2')
-            in_button = self.check_within_button(self.state['cursor_position'])
-            self.press(in_button, self.state['current_pattern'])
+            self.add['move_from'] = self.state['cursor_position']
+            self.add['move_to'], self.add['move_time'] = compute_stochastic_position(action, self.state['cursor_position'], sigma=0.01)
+            reward['user_low'] = -calc_distance(self.add['move_to'], self.state['target'], 'l2')
+            self.add['time'] = 0
+            self.add['is_moving'] = True
+            self.add['arrived'] = False
+            # in_button = self.check_within_button(self.add['move_to'])
+            # if in_button is not None:
+            #     self.state['current_pattern'][in_button] = 1 - self.state['current_pattern'][in_button]
 
-            if np.array_equal(self.state['current_pattern'], self.state['goal_pattern']):
-                self.done = True
-                done = {'__all__': True}
-                reward['user_high'] = -self.counter
-            elif self.counter >= self.n_buttons * 2:
-                self.done = True
-                done = {'__all__': True}
-                reward['user_high'] = -self.counter * 2
+            # if np.array_equal(self.state['current_pattern'], self.state['goal_pattern']):
+            #     self.done = True
+            #     done = {'__all__': True}
+            #     reward['user_high'] = -self.counter
+            # elif self.counter >= self.n_buttons * 2:
+            #     self.done = True
+            #     done = {'__all__': True}
+            #     reward['user_high'] = -self.counter * 2
+            # else:
+            #     done = {'__all__': False}
+            return self.get_obs('dummy'), reward, {"__all__": False}, {}
+        elif agent_active == 'dummy':
+            if self.add['is_moving']:
+                if self.add['time'] + self.dt < self.add['move_time']:
+                    self.add['time'] = self.add['time'] + self.dt  
+                else:
+                    self.add['time'] = self.add['move_time']
+                    self.add['is_moving'] = False
+                self.state['cursor_position'] = minjerk_trajectory(self.add['time'], self.add['move_time'], self.add['move_from'] ,self.add['move_to'])
+                return self.get_obs('dummy'), {'dummy': 0}, {"__all__": False}, {}
             else:
-                done = {'__all__': False}
-            return self.get_obs('user_high'), reward, done, {}
+                self.add['arrived'] = True
+                in_button = self.check_within_button(self.state['cursor_position'])
+                if in_button is not None:
+                    self.state['current_pattern'][in_button] = 1 - self.state['current_pattern'][in_button]
 
+                if np.array_equal(self.state['current_pattern'], self.state['goal_pattern']):
+                    self.done = True
+                    done = {'__all__': True}
+                    reward['user_high'] = -self.counter
+                elif self.counter >= self.n_buttons * 2:
+                    self.done = True
+                    done = {'__all__': True}
+                    reward['user_high'] = -self.counter * 2
+                else:
+                    done = {'__all__': False}
+                return self.get_obs('user_high'), reward, done, {}
+                
 
     def render(self, mode='human'):
         import pygame
@@ -194,10 +234,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     uiconfig = {
-        'random': False,
-        'n_buttons': 6,
-        'save_ui': False,
-        'mode': 'all_exclu'
+        'random': True,
+        'n_buttons': 7,
+        'save_ui': False
     }
     if args.demo:
         env = MultiAgentUI(uiconfig)
@@ -206,8 +245,12 @@ if __name__ == '__main__':
             env.reset()
             for _ in range(10):
                 env.step({'user_high': env.action_space['user_high'].sample()})
+                env.render()
                 env.step({'user_low': env.state['target']})
                 env.render()
+                while not env.add['arrived']:
+                    env.step({'dummy': env.state['target']})
+                    env.render()
         env.close()
 
     if args.dry_train:
@@ -257,13 +300,15 @@ if __name__ == '__main__':
 
         trainer.save("test4_1")
 
-        for i in range(10):
-            env.reset()
-            while not env.done:
-                action = trainer.compute_single_action(observation=list(env.get_obs('user_high').values())[0], policy_id='user_high', unsquash_action=True)
-                env.step({'user_high': action})
-                env.step({'user_low': env.state['target']})
-                env.render()
-        env.close()
+        # env.load("n_buttons-7random-False.json")
+        # for i in range(10):
+        #     env.reset()
+        #     while not env.done:
+        #         action = trainer.compute_single_action(env.get_obs('user_high'))
+        #         env.step(action)
+        #         action = trainer.compute_single_action(env.get_obs('user_low'))
+        #         env.step(action)
+        #         env.render()
+        # env.close()
 
 

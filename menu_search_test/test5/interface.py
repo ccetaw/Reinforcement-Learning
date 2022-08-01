@@ -1,7 +1,15 @@
-from tabnanny import check
 import numpy as np
 import json
-from utils import NpEncoder
+
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
 
 class Button():
     """
@@ -36,7 +44,7 @@ class Button():
         }
         return _status
         
-class Interface:
+class Interface():
     build_in_mode = ['normal', 'central', 'mutual_exclu', 'all_exclu']
 
     def __init__(self, config):

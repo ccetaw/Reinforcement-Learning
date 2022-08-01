@@ -42,7 +42,20 @@ def compute_stochastic_position(new_position, old_position, sigma):
     sampled_position = np.clip(np.random.normal(new_position, sigma), 0.0, 1.0)
     return sampled_position, mt
 
-def minjerk_trajectory(t, t_total, start_point, end_point):
+def minjerk_trajectory(t: float, t_total: float, start_point: np.array or list, end_point: np.array or list) -> np.array: 
+    """
+    Calculating the position of a mass point at time t along the minjerk trajectory
+    Input
+    _____
+    t: current time
+    t_total: total time taken from start point to end point
+    start_point: start point of the trajectory
+    end_point: end point of the trajectory
+
+    Return
+    ______
+    The position of the mass point at time t
+    """
     t = t/t_total
     x = start_point[0] + (end_point[0] - start_point[0]) * (6 * t**5 - 15 * t**4 + 10 * t**3)
     y = start_point[1] + (end_point[1] - start_point[1]) * (6 * t**5 - 15 * t**4 + 10 * t**3)

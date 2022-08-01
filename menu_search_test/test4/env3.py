@@ -88,6 +88,7 @@ class MultiAgentUI(MultiAgentEnv, Interface):
         self.state['current_pattern'] = self.sample_possible_pattern()
         self.state['goal_pattern'] = self.sample_possible_pattern()
         self.state['cursor_position'] = spaces.Box(low=0., high=1., shape=(2,)).sample()
+        self.state['target'] = spaces.Box(low=0., high=1., shape=(2,)).sample()
         self.counter = 0
         self.done = False
 
@@ -98,17 +99,13 @@ class MultiAgentUI(MultiAgentEnv, Interface):
         action = list(action_dict.values())[0]
         reward = {}
         if agent_active == 'user_high':
-            to_swtich = np.nonzero(self.state['goal_pattern'] - self.state['current_pattern'])[0]
-            if action in to_swtich:
-                reward['user_high'] = 0
-            else:
-                reward['user_high'] = -5
+            reward['user_high'] = -1
             target = self.button_normalized_position(self.ui[action]) + 0.5 * self.button_normalized_size(self.ui[action])
             self.state['target'] = target
             self.counter += 1
             return self.get_obs('user_low'), reward, {"__all__": False}, {}
         elif agent_active == 'user_low':
-            self.state['cursor_position'], _ = compute_stochastic_position(action, self.state['cursor_position'], sigma=0.01)
+            self.state['cursor_position'], _ = compute_stochastic_position(self.state['target'], self.state['cursor_position'], sigma=0.01)
             reward['user_low'] = -calc_distance(self.state['cursor_position'], self.state['target'], 'l2')
             in_button = self.check_within_button(self.state['cursor_position'])
             self.press(in_button, self.state['current_pattern'])
@@ -116,7 +113,7 @@ class MultiAgentUI(MultiAgentEnv, Interface):
             if np.array_equal(self.state['current_pattern'], self.state['goal_pattern']):
                 self.done = True
                 done = {'__all__': True}
-                reward['user_high'] = -self.counter
+                reward['user_high'] = self.n_buttons * 2
             elif self.counter >= self.n_buttons * 2:
                 self.done = True
                 done = {'__all__': True}
@@ -245,7 +242,7 @@ if __name__ == '__main__':
         }
 
         stop = {
-            "training_iteration": 150,
+            "training_iteration": 100,
         }
 
         config = {**ppo.DEFAULT_CONFIG, **config}
