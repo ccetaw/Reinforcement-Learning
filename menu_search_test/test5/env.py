@@ -10,7 +10,7 @@ from utils import (
 import gym
 
 class ButtonPanel(gym.Env, Interface):
-    metadata = {"render.modes": ["human", "rgb_array"], "render_fps": 30}
+    metadata = {"render.modes": ["human", "rgb_array"], "render_fps": 60}
     reward_range = (-float("inf"), float("inf"))
     user_pattern_5 = {
         'normal':       np.array([[1,0,0,0,0], [1,1,0,1,0], [1,0,1,0,0], [1,0,0,1,1]]),
@@ -35,9 +35,9 @@ class ButtonPanel(gym.Env, Interface):
     user_pattern[6] = user_pattern_6
     user_pattern[7] = user_pattern_7
     probabilities = {}
-    probabilities[5] = [33, 10, 17, 20, 20]
-    probabilities[6] = [33, 25, 15, 7, 10, 10]
-    probabilities[7] = [33, 15, 15, 7, 5, 5, 20]
+    probabilities[5] = [33, 30, 20, 17]
+    probabilities[6] = [33, 25, 25, 10, 7]
+    probabilities[7] = [33, 25, 25, 7, 5, 5]
     
     def __init__(self, config) -> None:
         super().__init__(config)
@@ -96,15 +96,14 @@ class ButtonPanel(gym.Env, Interface):
         if after_train:
             cum_sum = np.cumsum(self.probabilities[self.n_buttons])
             idx1 = np.random.randint(low=1, high=101)
-            to_choose1 = np.nonzero( (cum_sum - idx1) > 0)[0][0]
-            self.state['current_pattern'] = self.user_pattern[self.n_buttons][to_choose1]
+            to_choose1 = np.nonzero( (cum_sum - idx1) >= 0)[0][0]
+            self.state['current_pattern'] = self.user_pattern[self.n_buttons][self.mode][to_choose1].copy()
             idx2 = np.random.randint(low=1, high=101)
-            to_choose2 = np.nonzero( (cum_sum - idx2) > 0)[0][0]
+            to_choose2 = np.nonzero( (cum_sum - idx2) >= 0)[0][0]
             while to_choose2 == to_choose1:
                 idx2 = np.random.randint(low=1, high=101)
-                to_choose2 = np.nonzero( (cum_sum - idx2) > 0)[0][0]
-            self.state['goal_pattern'] = self.user_pattern[self.n_buttons][to_choose2]
-
+                to_choose2 = np.nonzero( (cum_sum - idx2) >= 0)[0][0]
+            self.state['goal_pattern'] = self.user_pattern[self.n_buttons][self.mode][to_choose2].copy()
         else:
             self.state['current_pattern'] = self.sample_possible_pattern()
             self.state['goal_pattern'] = self.sample_possible_pattern()
@@ -199,7 +198,7 @@ if __name__ == '__main__':
         env = ButtonPanel(env_config)
 
         for _ in range(3):
-            env.reset()
+            env.reset(after_train=True)
             for _ in range(10):
                 env.step(env.action_space.sample(), after_train=True)
                 env.render()

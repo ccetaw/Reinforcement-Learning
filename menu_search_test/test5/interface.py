@@ -51,7 +51,7 @@ class Interface():
         self.screen_width = 1920
         self.screen_height = 1080
         self.grid_size = 40
-        self.interval = 1
+        self.interval = 0
         self.margin_size = 40
         self.n_buttons = config['n_buttons']
         self.random = config['random']
@@ -72,6 +72,7 @@ class Interface():
 
 
     def generate_static_ui(self):
+        self.ui.clear()
         grid = np.ones(shape=(int((self.screen_height-2*self.margin_size)/self.grid_size+1), int((self.screen_width-2*self.margin_size)/self.grid_size)+1))
         for id in self.button_id:
             not_occupied = np.nonzero(grid)
@@ -96,6 +97,7 @@ class Interface():
             self.update_grid(grid_button_position, grid_button_size, grid)
 
     def generate_random_ui(self):
+        self.ui.clear()
         grid = np.ones(shape=(int((self.screen_height-2*self.margin_size)/self.grid_size+1), int((self.screen_width-2*self.margin_size)/self.grid_size+1)))
         for id in self.button_id:
             not_occupied = np.nonzero(grid)
@@ -113,6 +115,8 @@ class Interface():
 
             while not self.is_available_grid_point(grid_button_position, grid_button_size, grid):
                 rand_postion = np.random.randint(low=0, high=np.size(not_occupied[0]))
+                button_height = np.random.randint(low=0, high=len(Button.size_options))
+                button_width = np.random.randint(low=0, high=len(Button.size_options))
                 grid_button_position = np.array([not_occupied[0][rand_postion], not_occupied[1][rand_postion]])
 
             button_args['position'] = self.get_pixel(grid_button_position)
@@ -248,8 +252,10 @@ class Interface():
             'margin_size': self.margin_size,
             'n_buttons': self.n_buttons,
             'button_id': self.button_id,
+            'mode': self.mode,
             'buttons': []
         }
+        _status['buttons'].clear()
         for button in self.ui:
             _status['buttons'].append(button.status())
         return _status
@@ -269,9 +275,11 @@ class Interface():
             self.interval = parameters['margin_size']
             self.n_buttons = parameters['n_buttons']
             self.button_id = np.array(parameters['button_id'])
+            self.mode = parameters['mode']
             self.ui.clear()
             for button_parameters in parameters['buttons']:
                 self.ui.append(Button(button_parameters))
+            self.generate_control_button_group()
         
 
     

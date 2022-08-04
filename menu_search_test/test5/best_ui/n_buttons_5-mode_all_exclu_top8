@@ -1,0 +1,73 @@
+{
+    "screen_height": 1080,
+    "screen_width": 1920,
+    "grid_size": 40,
+    "interval": 0,
+    "margin_size": 40,
+    "n_buttons": 6,
+    "button_id": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+    ],
+    "mode": "all_exclu",
+    "buttons": [
+        {
+            "position": [
+                400,
+                1400
+            ],
+            "height": 2,
+            "width": 2,
+            "id": 0
+        },
+        {
+            "position": [
+                880,
+                520
+            ],
+            "height": 1,
+            "width": 2,
+            "id": 1
+        },
+        {
+            "position": [
+                760,
+                1080
+            ],
+            "height": 2,
+            "width": 2,
+            "id": 2
+        },
+        {
+            "position": [
+                760,
+                1600
+            ],
+            "height": 1,
+            "width": 2,
+            "id": 3
+        },
+        {
+            "position": [
+                520,
+                280
+            ],
+            "height": 1,
+            "width": 1,
+            "id": 4
+        },
+        {
+            "position": [
+                600,
+                1080
+            ],
+            "height": 0,
+            "width": 1,
+            "id": 5
+        }
+    ]
+}
