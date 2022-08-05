@@ -236,7 +236,7 @@ class Interface():
                 if np.array_equal(pattern[self.button_group['normal']], np.zeros(self.n_buttons -1)):
                     return False
         return True
-                
+
     def button_normalized_position(self, button: Button):
         return button.position  / np.array([self.screen_height, self.screen_width])
 
@@ -280,9 +280,25 @@ class Interface():
             for button_parameters in parameters['buttons']:
                 self.ui.append(Button(button_parameters))
             self.generate_control_button_group()
-        
-
     
+    def button_parameters(self):
+        return self.status()['buttons']
+
+    def set_from_button_parameters(self, button_parameters):
+        self.ui.clear()
+        grid = np.ones(shape=(int((self.screen_height-2*self.margin_size)/self.grid_size+1), int((self.screen_width-2*self.margin_size)/self.grid_size+1)))
+        for button_arg in button_parameters:
+            grid_button_position = np.array([int((button_arg['position'][0] - self.margin_size)/self.grid_size), int((button_arg['position'][1] - self.margin_size)/self.grid_size)])
+            grid_button_size = Button(button_arg).relative_size(self.grid_size)
+            if self.is_available_grid_point(grid_button_position, grid_button_size, grid):
+                button = Button(button_arg)
+                self.ui.append(button)
+                self.update_grid(grid_button_position, grid_button_size, grid)
+            else:
+                return False
+        return True
+
+        
 
     def update_page(self):
         pass
@@ -291,9 +307,6 @@ class Interface():
         pass
 
     def screenshot(self, suffix):
-        pass
-
-    def update_folder(self, name):
         pass
 
     def to_gif(self):

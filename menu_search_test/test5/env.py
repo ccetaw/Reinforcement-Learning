@@ -47,7 +47,7 @@ class ButtonPanel(gym.Env, Interface):
             'goal_pattern': spaces.MultiBinary(self.n_buttons)
         }
         self.observation_space = spaces.Dict(obs_dict)
-        self.state = {
+        self.obs_full = {
             'current_pattern': spaces.MultiBinary(self.n_buttons),
             'goal_pattern': spaces.MultiBinary(self.n_buttons),
             'cursor_position': spaces.Box(low=0., high=1., shape=(2,)),
@@ -66,24 +66,24 @@ class ButtonPanel(gym.Env, Interface):
     def get_obs(self):
         obs = {}
         for key in self.observation_space:
-            obs[key] = self.state[key]
+            obs[key] = self.obs_full[key]
         return obs
 
     def step(self, action, after_train=False):
         if after_train:
-            self.add['previous_pattern'] = self.state['current_pattern'].copy()
-            self.state['target'] = self.button_normalized_position(self.ui[action]) + 0.5 * self.button_normalized_size(self.ui[action])
-            sigma, _ = compute_width_distance_fast(self.state['cursor_position'], self, action)
-            self.add['move_from'] = self.state['cursor_position']
-            self.add['move_to'], self.add['move_time'] = compute_stochastic_position(self.state['target'], self.state['cursor_position'], 0.01)
+            self.add['previous_pattern'] = self.obs_full['current_pattern'].copy()
+            self.obs_full['target'] = self.button_normalized_position(self.ui[action]) + 0.5 * self.button_normalized_size(self.ui[action])
+            sigma, _ = compute_width_distance_fast(self.obs_full['cursor_position'], self, action)
+            self.add['move_from'] = self.obs_full['cursor_position']
+            self.add['move_to'], self.add['move_time'] = compute_stochastic_position(self.obs_full['target'], self.obs_full['cursor_position'], sigma/4)
             self.add['jerk'] = jerk_of_minjerk_trajectory(self.add['move_time'], self.add['move_from'], self.add['move_to'])
             in_button = self.check_within_button(self.add['move_to'])
-            self.press(in_button, self.state['current_pattern'])
+            self.press(in_button, self.obs_full['current_pattern'])
         else:
-            self.press(action, self.state['current_pattern'])
+            self.press(action, self.obs_full['current_pattern'])
         reward = -1
         self.counter += 1
-        if np.array_equal(self.state['current_pattern'], self.state['goal_pattern']):
+        if np.array_equal(self.obs_full['current_pattern'], self.obs_full['goal_pattern']):
             self.done = True
             reward += self.n_buttons * 2
         elif self.counter >= self.n_buttons * 2:
@@ -92,23 +92,27 @@ class ButtonPanel(gym.Env, Interface):
         
         return self.get_obs(), reward, self.done, {}
 
-    def reset(self, after_train=False):
+    def reset(self, after_train=False, start_pattern=None, goal_pattern=None):
         if after_train:
-            cum_sum = np.cumsum(self.probabilities[self.n_buttons])
-            idx1 = np.random.randint(low=1, high=101)
-            to_choose1 = np.nonzero( (cum_sum - idx1) >= 0)[0][0]
-            self.state['current_pattern'] = self.user_pattern[self.n_buttons][self.mode][to_choose1].copy()
-            idx2 = np.random.randint(low=1, high=101)
-            to_choose2 = np.nonzero( (cum_sum - idx2) >= 0)[0][0]
-            while to_choose2 == to_choose1:
+            if start_pattern is not None and goal_pattern is not None:
+                self.obs_full['current_pattern'] = start_pattern
+                self.obs_full['goal_pattern'] = goal_pattern
+            else:
+                cum_sum = np.cumsum(self.probabilities[self.n_buttons])
+                idx1 = np.random.randint(low=1, high=101)
+                to_choose1 = np.nonzero( (cum_sum - idx1) >= 0)[0][0]
+                self.obs_full['current_pattern'] = self.user_pattern[self.n_buttons][self.mode][to_choose1].copy()
                 idx2 = np.random.randint(low=1, high=101)
                 to_choose2 = np.nonzero( (cum_sum - idx2) >= 0)[0][0]
-            self.state['goal_pattern'] = self.user_pattern[self.n_buttons][self.mode][to_choose2].copy()
+                while to_choose2 == to_choose1:
+                    idx2 = np.random.randint(low=1, high=101)
+                    to_choose2 = np.nonzero( (cum_sum - idx2) >= 0)[0][0]
+                self.obs_full['goal_pattern'] = self.user_pattern[self.n_buttons][self.mode][to_choose2].copy()
         else:
-            self.state['current_pattern'] = self.sample_possible_pattern()
-            self.state['goal_pattern'] = self.sample_possible_pattern()
+            self.obs_full['current_pattern'] = self.sample_possible_pattern()
+            self.obs_full['goal_pattern'] = self.sample_possible_pattern()
 
-        self.state['cursor_position'] = spaces.Box(low=0., high=1., shape=(2,)).sample() 
+        self.obs_full['cursor_position'] = spaces.Box(low=0., high=1., shape=(2,)).sample() 
         self.counter = 0
         self.done = False
 
@@ -118,7 +122,7 @@ class ButtonPanel(gym.Env, Interface):
         import pygame
         from pygame import gfxdraw
 
-        if self.state is None:
+        if self.obs_full is None:
             return None
 
         if self.screen is None:
@@ -137,13 +141,13 @@ class ButtonPanel(gym.Env, Interface):
                 time = self.add['move_time']
                 arrived = True
             
-            self.state['cursor_position'] = minjerk_trajectory(time, self.add['move_time'], self.add['move_from'] ,self.add['move_to'])
+            self.obs_full['cursor_position'] = minjerk_trajectory(time, self.add['move_time'], self.add['move_from'] ,self.add['move_to'])
             surf = pygame.Surface((self.screen_width, self.screen_height))
             surf.fill((255, 255, 255))
             font = pygame.font.Font('freesansbold.ttf', 16)
-            x, y = self.state['cursor_position'][0] * self.screen_height, self.state['cursor_position'][1] * self.screen_width
+            x, y = self.obs_full['cursor_position'][0] * self.screen_height, self.obs_full['cursor_position'][1] * self.screen_width
             gfxdraw.filled_circle(surf, int(y), int(x), 20, (0, 0, 255))
-            x, y = self.state['target'][0] * self.screen_height, self.state['target'][1] * self.screen_width
+            x, y = self.obs_full['target'][0] * self.screen_height, self.obs_full['target'][1] * self.screen_width
             gfxdraw.circle(surf, int(y), int(x), 20, (0, 0, 255))
                 
             if arrived:
@@ -152,7 +156,7 @@ class ButtonPanel(gym.Env, Interface):
                                             button.position[0],
                                             button.size[1],
                                             button.size[0])
-                    if button.id in np.nonzero(self.state['current_pattern'])[0]:
+                    if button.id in np.nonzero(self.obs_full['current_pattern'])[0]:
                         gfxdraw.rectangle(surf, rect, (255, 0, 0))  # Red means on
                     else:
                         gfxdraw.rectangle(surf, rect, (0, 0, 0))   # Black means off
@@ -170,7 +174,7 @@ class ButtonPanel(gym.Env, Interface):
 
             for button in self.ui:
                 t = f"Button {button.id}"
-                if button.id in np.nonzero(self.state['goal_pattern'])[0]:
+                if button.id in np.nonzero(self.obs_full['goal_pattern'])[0]:
                     text = font.render(t, True, (255, 0, 0))
                 else:
                     text = font.render(t, True, (0, 0, 0))
