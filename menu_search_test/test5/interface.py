@@ -48,8 +48,8 @@ class Interface():
     build_in_mode = ['normal', 'central', 'mutual_exclu', 'all_exclu']
 
     def __init__(self, config):
-        self.screen_width = 1920
-        self.screen_height = 1080
+        self.screen_width = 960
+        self.screen_height = 720
         self.grid_size = 40
         self.interval = 0
         self.margin_size = 40
@@ -76,7 +76,7 @@ class Interface():
         grid = np.ones(shape=(int((self.screen_height-2*self.margin_size)/self.grid_size+1), int((self.screen_width-2*self.margin_size)/self.grid_size)+1))
         for id in self.button_id:
             not_occupied = np.nonzero(grid)
-            button_size = 2
+            button_size = 1
             grid_button_position = np.array([not_occupied[0][0], not_occupied[1][0]])
             button_args = {
                 'position': self.get_pixel(grid_button_position),
@@ -102,7 +102,7 @@ class Interface():
         for id in self.button_id:
             not_occupied = np.nonzero(grid)
             button_height = np.random.randint(low=0, high=len(Button.size_options))
-            button_width = np.random.randint(low=0, high=len(Button.size_options))
+            button_width = button_height
             rand_postion = np.random.randint(low=0, high=np.size(not_occupied[0]))
             grid_button_position = np.array([not_occupied[0][rand_postion], not_occupied[1][rand_postion]])
             button_args = {
@@ -321,6 +321,7 @@ if __name__ == '__main__':
     env_config = {
         'random': True,
         'n_buttons': 10,
+        'mode': 'normal'
     }
     interface = Interface(env_config)
     # print(interface.status())

@@ -1,6 +1,5 @@
-from interface import Interface
-import pygame
-from pygame import gfxdraw
+from env import ButtonPanel
+from ray.rllib.agents import ppo
 
 env_config = {
     'random': True,
@@ -8,36 +7,27 @@ env_config = {
     'mode': 'all_exclu'
 }
 
-interface = Interface(env_config)
+config = {
+    "num_workers": 3,
+    "env": ButtonPanel,
+    "env_config": env_config,
+    "gamma": 0.9,
+    "framework": "torch",
+    "log_level": "CRITICAL",
+    "num_gpus": 0,
+    "seed": 31415,
+}
 
-pygame.init()
-pygame.display.init()
-font = pygame.font.Font('freesansbold.ttf', 16)
-screen = pygame.display.set_mode((interface.screen_width, interface.screen_height))
-clock = pygame.time.Clock()
-for i in range(10):
-    interface.load('./best_ui/n_buttons_5-mode_all_exclu_top'+str(i))
-    for _ in range(20):
-        # interface = Interface(env_config)
-        surf = pygame.Surface((interface.screen_width, interface.screen_height))
-        surf.fill((255, 255, 255))
-            
-        
-        for button in interface.ui:
-            rect = pygame.Rect(button.position[1],
-                                button.position[0],
-                                button.size[1],
-                                button.size[0])
-            gfxdraw.rectangle(surf, rect, (200, 0, 0))
-        screen.blit(surf, (0, 0))
+config = {**ppo.DEFAULT_CONFIG, **config}
+agent = ppo.PPOTrainer(config=config)
+agent.restore('./trained_user/PPOTrainer_2022-08-01_20-04-46/random_True-n_buttons_6-save_ui_True-mode_all_exclu/checkpoint_000200/checkpoint-200')
+env = ButtonPanel(env_config)
+env.load('./sa_1')
 
-        for button in interface.ui:
-            t = f"Button {button.id}"
-            text = font.render(t, True, (0, 0, 0))
-            screen.blit(text, (button.position[1], button.position[0]))
 
-        pygame.event.pump()
-        clock.tick(2)
-        pygame.display.flip()
-pygame.display.quit()
-pygame.quit()
+for i in range(100):  
+    env.reset(after_train=True)
+    while not env.done:
+        action = agent.compute_single_action(env.get_obs(), unsquash_action=True)
+        env.step(action, after_train=True)
+        env.render()

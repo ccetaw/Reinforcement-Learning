@@ -2,12 +2,14 @@ from simanneal import Annealer
 from env import ButtonPanel
 import numpy as np
 from ray.rllib.agents import ppo
+import matplotlib.pyplot as plt
 
 class BestUI(Annealer, ButtonPanel):
     def __init__(self, config):
         super(Annealer, self).__init__(config)
         super().__init__(initial_state=self.button_parameters())
         self.agent = config['agent']
+        self.history = []
 
     def move(self):
         flag = True
@@ -21,21 +23,26 @@ class BestUI(Annealer, ButtonPanel):
                 to_state[i]['position'][1] = to_move_1 if to_move_1 > self.margin_size and to_move_1 < self.screen_width - self.margin_size else state[i]['position'][1]
                 to_height = state[i]['height'] + np.random.randint(low=-1, high=2) 
                 to_state[i]['height'] = to_height if to_height>=0 and to_height<=2 else state[i]['height']
-                to_width = state[i]['width'] + np.random.randint(low=-1, high=2) 
-                to_state[i]['width'] = to_width if to_width>=0 and to_width<=2 else state[i]['width']
+                to_state[i]['width'] = to_state[i]['height']
             flag = not self.set_from_button_parameters(to_state)
         self.state = self.button_parameters()
 
 
     def energy(self):
         sum_time = 0
-        for _ in range(300):  
+        for _ in range(500):  
             self.reset(after_train=True)
             while not self.done:
                 action = self.agent.compute_single_action(self.get_obs(), unsquash_action=True)
                 self.step(action, after_train=True)
                 sum_time += self.add['move_time']
-        return sum_time
+        ui_x = np.array([x['position'][0] for x in self.button_parameters()])
+        ui_y = np.array([y['position'][1] for y in self.button_parameters()])
+        std_x = np.std(ui_x)
+        std_y = np.std(ui_y)
+        cost = sum_time + std_x + std_y
+        self.history.append(cost)
+        return cost
 
 env_config = {
     'random': True,
@@ -64,12 +71,24 @@ optim_config = {
 }
 
 optimizer = BestUI(optim_config)
-optimizer.Tmax = 9000
-optimizer.Tmin = 0.5
-optimizer.steps = 10000
+optimizer.generate_static_ui()
+auto_schedule = optimizer.auto(minutes=1)
+optimizer.set_schedule(auto_schedule)
+# optimizer.Tmax = 1000
+# optimizer.Tmin = 0.5
+# optimizer.steps = 10000
+# optimizer.updates = 1000
+
 
 optimizer.anneal()
-optimizer.save('./sa_1')
+optimizer.save('./sa_3')
+
+x = np.array(range(len(optimizer.history)))
+y = np.array(optimizer.history)
+
+fig, ax = plt.subplots()
+ax.plot(x, y, linewidth=2.0)
+plt.show()
 
 
     
