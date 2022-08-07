@@ -17054,3 +17054,19 @@ Result logdir: /local/home/jingyuwang/repo/Reinforcement-Learning/menu_search_te
 Number of trials: 12/12 (12 TERMINATED)
 
 
+Traceback (most recent call last):
+  File "simulated_annealing_1.py", line 1, in <module>
+    from simanneal import Annealer
+ModuleNotFoundError: No module named 'simanneal'
+Traceback (most recent call last):
+  File "simulated_annealing_1.py", line 1, in <module>
+    from simanneal import Annealer
+ModuleNotFoundError: No module named 'simanneal'
+Traceback (most recent call last):
+  File "simulated_annealing_2.py", line 1, in <module>
+    from simanneal import Annealer
+ModuleNotFoundError: No module named 'simanneal'
+Traceback (most recent call last):
+  File "simulated_annealing_3.py", line 1, in <module>
+    from simanneal import Annealer
+ModuleNotFoundError: No module named 'simanneal'
